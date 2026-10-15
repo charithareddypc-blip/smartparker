@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}New Reservation{% endblock %}
+{% block page_title %}Create New Reservation{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h4 class="fw-bold mb-0">Book a Parking Bay</h4>
+                <p class="text-muted small">Select time slot, enter vehicle details, and confirm reservation.</p>
+            </div>
+            <a href="{{ url_for('reservations.list_reservations') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Reservations
+            </a>
+        </div>
+
+        <form action="{{ url_for('reservations.create_reservation') }}" method="POST" id="reservationForm">
+            <div class="row g-4">
+                <!-- Left Column: Customer & Vehicle Information -->
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header bg-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-person-circle text-primary me-2"></i>1. Customer & Vehicle Info</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Customer Details -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Customer Full Name <span class="text-danger">*</span></label>
+                                <input type="text" name="customer_name" class="form-control" placeholder="e.g. Eleanor Vance" required>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Email Address</label>
+                                    <input type="email" name="customer_email" class="form-control" placeholder="name@example.com">
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Phone Number</label>
+                                    <input type="tel" name="customer_phone" class="form-control" placeholder="+1-555-0199">
+                                </div>
+                            </div>
+
+                            <hr class="my-4 text-muted">
+
+                            <!-- Vehicle Details -->
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Vehicle License Plate <span class="text-danger">*</span></label>
+                                <input type="text" name="license_plate" class="form-control font-monospace text-uppercase" placeholder="e.g. CA-9921" required>
+                                <div class="form-text small">Standard state or regional registration plate.</div>
+                            </div>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Vehicle Type</label>
+                                    <select name="vehicle_type" class="form-select">
+                                        <option value="Sedan">Sedan</option>
+                                        <option value="SUV">SUV</option>
+                                        <option value="Compact">Compact / Hatchback</option>
+                                        <option value="EV">Electric Vehicle (EV)</option>
+                                        <option value="Truck">Truck / Van</option>
+                                        <option value="Motorcycle">Motorcycle</option>
+                                    </select>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Make & Model</label>
+                                    <input type="text" name="make_model" class="form-control" placeholder="e.g. Honda Civic">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">Booking Notes (Optional)</label>
+                                <textarea name="notes" class="form-control" rows="2" placeholder="Special requests, arrival notes, or instructions..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Slot Selection & Real-Time Price Estimator -->
+                <div class="col-md-6">
+                    <div class="card shadow-sm border-0 mb-3">
+                        <div class="card-header bg-white py-3">
+                            <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history text-primary me-2"></i>2. Time Window & Parking Slot</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Time inputs -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">Start Time <span class="text-danger">*</span></label>
+                                    <input type="datetime-local" name="start_time" id="inputStartTime" class="form-control" value="{{ default_start }}" required>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="form-label small fw-semibold">End Time <span class="text-danger">*</span></label>
+                                    <input type="datetime-local" name="end_time" id="inputEndTime" class="form-control" value="{{ default_end }}" required>
+                                </div>
+                            </div>
+
+                            <!-- Slot selector -->
+                            <div class="mb-4">
+                                <label class="form-label small fw-semibold">Select Parking Slot <span class="text-danger">*</span></label>
+                                <select name="slot_id" id="selectSlot" class="form-select" required>
+                                    <option value="">-- Choose Parking Slot --</option>
+                                    {% for slot in slots %}
+                                        <option value="{{ slot.id }}" data-rate="{{ slot.hourly_rate }}" data-type="{{ slot.slot_type }}">
+                                            {{ slot.slot_number }} ({{ slot.floor_level }}) - {{ slot.slot_type | capitalize }} [${{ "%.2f"|format(slot.hourly_rate) }}/hr]
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Live Price Estimation Panel -->
+                            <div class="p-3 rounded border bg-light">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="small text-muted">Estimated Duration:</span>
+                                    <span class="fw-bold" id="estDuration">—</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="small text-muted">Slot Hourly Rate:</span>
+                                    <span class="fw-bold" id="estRate">—</span>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                                    <span class="fw-bold">Total Estimated Fee:</span>
+                                    <span class="fs-4 fw-bold text-primary" id="estFee">$0.00</span>
+                                </div>
+                                
+                                <div id="availabilityAlert" class="mt-2 small text-muted">
+                                    Select a slot and valid time range to check instant availability.
+                                </div>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                <button type="submit" id="btnSubmitBooking" class="btn btn-primary py-2 fw-semibold shadow-sm">
+                                    <i class="bi bi-check2-circle me-1"></i> Confirm Reservation
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/parking.js') }}"></script>
+{% endblock %}

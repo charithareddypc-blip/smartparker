@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}Customers & Vehicles{% endblock %}
+{% block page_title %}Customer & Vehicle Directory{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">Customer Profiles</h4>
+        <p class="text-muted small mb-0">Manage customer contact information, registered vehicles, and booking histories.</p>
+    </div>
+</div>
+
+<!-- Search Toolbar -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('customers.list_customers') }}" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Search by customer name, phone, or email..." value="{{ search }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Search</button>
+            </div>
+            {% if search %}
+                <div class="col-md-2">
+                    <a href="{{ url_for('customers.list_customers') }}" class="btn btn-sm btn-light border">Reset</a>
+                </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- Customers Table -->
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Customer ID</th>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Registered Vehicles</th>
+                    <th>Reservations</th>
+                    <th>Joined</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in customers %}
+                    <tr>
+                        <td class="text-muted small">#{{ c.id }}</td>
+                        <td class="fw-bold">
+                            <a href="{{ url_for('customers.customer_details', customer_id=c.id) }}" class="text-decoration-none">
+                                {{ c.full_name }}
+                            </a>
+                        </td>
+                        <td class="small">{{ c.email or '—' }}</td>
+                        <td class="small">{{ c.phone or '—' }}</td>
+                        <td>
+                            {% for v in c.vehicles %}
+                                <span class="badge bg-dark font-monospace me-1">{{ v.license_plate }}</span>
+                            {% else %}
+                                <span class="text-muted small">None</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <span class="badge bg-primary rounded-pill">{{ c.total_reservations }} bookings</span>
+                        </td>
+                        <td class="small text-muted">{{ c.created_at | datetime('%Y-%m-%d') }}</td>
+                        <td class="text-end">
+                            <a href="{{ url_for('customers.customer_details', customer_id=c.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-person-lines-fill me-1"></i> View History
+                            </a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <i class="bi bi-people fs-1"></i>
+                            <p class="mt-2 mb-0">No customers found.</p>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

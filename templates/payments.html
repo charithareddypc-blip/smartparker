@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Payments & Revenue{% endblock %}
+{% block page_title %}Payment Management & Revenue{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">Billing & Transactions</h4>
+        <p class="text-muted small mb-0">Monitor payments, demo gateway transactions, and revenue collections.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('payments.export_csv') }}" class="btn btn-outline-secondary shadow-sm">
+            <i class="bi bi-file-earmark-arrow-down me-1"></i> Export Transactions CSV
+        </a>
+    </div>
+</div>
+
+<!-- Financial Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="metric-card metric-success">
+            <div>
+                <div class="metric-title">Total Revenue</div>
+                <div class="metric-value text-success">{{ revenue.total_revenue | currency }}</div>
+                <div class="small text-muted mt-1"><i class="bi bi-check-all text-success"></i> Strictly paid receipts</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card metric-primary">
+            <div>
+                <div class="metric-title">Paid Transactions</div>
+                <div class="metric-value text-primary">{{ revenue.total_paid_count }}</div>
+                <div class="small text-muted mt-1">Settled payments</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-receipt-cutoff"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card metric-warning">
+            <div>
+                <div class="metric-title">Pending Collections</div>
+                <div class="metric-value text-warning">{{ revenue.pending_amount | currency }}</div>
+                <div class="small text-muted mt-1">{{ revenue.pending_count }} reservations awaiting payment</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-hourglass-bottom"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="metric-card metric-danger">
+            <div>
+                <div class="metric-title">Failed Payments</div>
+                <div class="metric-value text-danger">{{ revenue.failed_count }}</div>
+                <div class="small text-muted mt-1">Declined demo transactions</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-x-octagon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Toolbar -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="{{ url_for('payments.list_payments') }}" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Search reference, customer, or plate..." value="{{ search }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="all">All Payment Statuses</option>
+                    <option value="paid" {% if status == 'paid' %}selected{% endif %}>Paid</option>
+                    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="failed" {% if status == 'failed' %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}" title="From Date">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}" title="To Date">
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-sm btn-primary flex-grow-1">Filter</button>
+                <a href="{{ url_for('payments.list_payments') }}" class="btn btn-sm btn-light border">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Payments Table -->
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Transaction Ref</th>
+                    <th>Reservation Code</th>
+                    <th>Customer & Car</th>
+                    <th>Bay</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Payment Status</th>
+                    <th>Transaction Date</th>
+                    <th class="text-end">Receipt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in payments %}
+                    <tr>
+                        <td class="font-monospace fw-bold small">
+                            <a href="{{ url_for('payments.view_receipt', payment_id=p.id) }}" class="text-decoration-none">
+                                {{ p.transaction_ref }}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{{ url_for('reservations.view_reservation', res_id=p.reservation_id) }}" class="text-decoration-none">
+                                {{ p.reservation_code }}
+                            </a>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">{{ p.customer_name }}</div>
+                            <div class="small text-muted">{{ p.license_plate }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ p.slot_number }}</span>
+                        </td>
+                        <td class="fw-bold {% if p.payment_status == 'paid' %}text-success{% else %}text-muted{% endif %}">
+                            {{ p.amount | currency }}
+                        </td>
+                        <td class="small text-muted">{{ p.payment_method }}</td>
+                        <td>
+                            <span class="badge {{ p.payment_status | status_badge }}">{{ p.payment_status | capitalize }}</span>
+                        </td>
+                        <td class="small">{{ p.created_at | datetime }}</td>
+                        <td class="text-end">
+                            {% if p.payment_status == 'paid' %}
+                                <a href="{{ url_for('payments.view_receipt', payment_id=p.id) }}" class="btn btn-sm btn-outline-primary" title="Print Receipt">
+                                    <i class="bi bi-printer"></i> Receipt
+                                </a>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="bi bi-receipt fs-1"></i>
+                            <p class="mt-2 mb-0">No payment transactions found.</p>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

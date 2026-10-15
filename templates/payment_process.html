@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Demo Payment Gateway{% endblock %}
+{% block page_title %}Simulated Payment Gateway{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="alert alert-info border-0 shadow-sm d-flex align-items-center gap-2 mb-4">
+            <i class="bi bi-info-circle-fill fs-4 text-info"></i>
+            <div>
+                <strong>Simulated Sandbox Environment:</strong> This application utilizes a demo payment gateway. No actual financial credentials, credit cards, or real funds are collected.
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold"><i class="bi bi-credit-card-2-front text-primary me-2"></i>Complete Reservation Payment</h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Summary of Due Amount -->
+                <div class="p-3 bg-light rounded border mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-sm-7">
+                            <div class="small text-muted">Reservation Reference:</div>
+                            <div class="fw-bold fs-5 text-dark">{{ res.reservation_code }}</div>
+                            <div class="small text-muted mt-1">
+                                Customer: <strong>{{ res.customer_name }}</strong> | Car: <strong>{{ res.license_plate }}</strong> | Bay: <strong>{{ res.slot_number }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-sm-5 text-sm-end mt-3 mt-sm-0">
+                            <div class="small text-muted">Total Amount Due:</div>
+                            <div class="fs-2 fw-bold text-success">{{ res.estimated_amount | currency }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('payments.process_payment', res_id=res.id) }}" method="POST">
+                    <!-- Payment Method Selection -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Select Demo Payment Method</label>
+                        <div class="row g-2">
+                            <div class="col-sm-4">
+                                <label class="border rounded p-3 d-flex flex-column align-items-center justify-content-center text-center cursor-pointer w-100 h-100 bg-white">
+                                    <input type="radio" name="payment_method" value="demo_card" checked class="form-check-input mb-2">
+                                    <i class="bi bi-credit-card text-primary fs-3 mb-1"></i>
+                                    <span class="small fw-semibold">Demo Card</span>
+                                </label>
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="border rounded p-3 d-flex flex-column align-items-center justify-content-center text-center cursor-pointer w-100 h-100 bg-white">
+                                    <input type="radio" name="payment_method" value="demo_upi" class="form-check-input mb-2">
+                                    <i class="bi bi-qr-code-scan text-success fs-3 mb-1"></i>
+                                    <span class="small fw-semibold">Demo UPI</span>
+                                </label>
+                            </div>
+                            <div class="col-sm-4">
+                                <label class="border rounded p-3 d-flex flex-column align-items-center justify-content-center text-center cursor-pointer w-100 h-100 bg-white">
+                                    <input type="radio" name="payment_method" value="demo_cash" class="form-check-input mb-2">
+                                    <i class="bi bi-cash-stack text-warning fs-3 mb-1"></i>
+                                    <span class="small fw-semibold">Cash Desk</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sandbox Simulation Outcome Selection -->
+                    <div class="mb-4 p-3 border rounded bg-white">
+                        <label class="form-label fw-bold small text-muted text-uppercase mb-2">Test Simulation Outcome</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="action_type" id="simSuccess" value="success" checked>
+                            <label class="form-check-label fw-semibold text-success" for="simSuccess">
+                                <i class="bi bi-check-circle-fill me-1"></i> Simulate Successful Payment (Approve transaction & generate receipt)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="action_type" id="simFail" value="fail">
+                            <label class="form-check-label fw-semibold text-danger" for="simFail">
+                                <i class="bi bi-x-circle-fill me-1"></i> Simulate Payment Failure (Test declined transaction workflow)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold">Transaction Note (Optional)</label>
+                        <input type="text" name="notes" class="form-control" placeholder="e.g. Verified at entrance gate terminal">
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between pt-2">
+                        <a href="{{ url_for('reservations.view_reservation', res_id=res.id) }}" class="btn btn-light border">
+                            Cancel & Return
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold shadow-sm">
+                            <i class="bi bi-lock-fill me-1"></i> Authorize Demo Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+
+{% block title %}Receipt - {{ receipt.transaction_ref }}{% endblock %}
+{% block page_title %}Payment Receipt{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Actions Toolbar (Hidden when printed) -->
+        <div class="d-flex align-items-center justify-content-between mb-3 no-print">
+            <a href="{{ url_for('payments.list_payments') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Back to Payments
+            </a>
+            <div class="d-flex gap-2">
+                <button onclick="window.print()" class="btn btn-primary btn-sm btn-print shadow-sm">
+                    <i class="bi bi-printer-fill me-1"></i> Print Receipt / Save PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Printable Receipt Container -->
+        <div class="card shadow-sm border receipt-container p-4 p-md-5 bg-white">
+            <!-- Receipt Header -->
+            <div class="d-flex justify-content-between align-items-start border-bottom pb-4 mb-4">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <i class="bi bi-p-square-fill fs-3 text-primary"></i>
+                        <h4 class="fw-bold mb-0">SmartPark Pro</h4>
+                    </div>
+                    <div class="text-muted small">Intelligent Parking Management System</div>
+                    <div class="text-muted small">Facility Operations & Automated Billing</div>
+                </div>
+                <div class="text-end">
+                    <span class="badge bg-success fs-6 px-3 py-2 text-uppercase mb-2">Paid Receipt</span>
+                    <div class="small text-muted">Transaction Reference:</div>
+                    <div class="fw-bold font-monospace">{{ receipt.transaction_ref }}</div>
+                </div>
+            </div>
+
+            <!-- Transaction Details Grid -->
+            <div class="row g-4 mb-4">
+                <div class="col-sm-6">
+                    <h6 class="text-uppercase text-muted fw-bold small mb-2">Billed To (Customer)</h6>
+                    <div class="fw-bold fs-6">{{ receipt.customer_name }}</div>
+                    <div class="text-muted small">Email: {{ receipt.customer_email or '—' }}</div>
+                    <div class="text-muted small">Phone: {{ receipt.customer_phone or '—' }}</div>
+                    <div class="text-muted small mt-1">Vehicle Plate: <span class="badge bg-dark font-monospace">{{ receipt.license_plate }}</span> ({{ receipt.vehicle_type }})</div>
+                </div>
+                <div class="col-sm-6 text-sm-end">
+                    <h6 class="text-uppercase text-muted fw-bold small mb-2">Parking & Schedule</h6>
+                    <div class="fw-bold">Bay {{ receipt.slot_number }} ({{ receipt.floor_level }})</div>
+                    <div class="text-muted small">{{ receipt.area_name }}</div>
+                    <div class="text-muted small mt-1">Reservation Code: <strong>{{ receipt.reservation_code }}</strong></div>
+                    <div class="text-muted small">Payment Date: {{ receipt.paid_at | datetime }}</div>
+                </div>
+            </div>
+
+            <!-- Itemized Table -->
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Description</th>
+                            <th class="text-center">Hours</th>
+                            <th class="text-end">Rate / Hr</th>
+                            <th class="text-end">Total Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>Parking Bay Reservation (Slot {{ receipt.slot_number }})</strong>
+                                <div class="small text-muted">
+                                    Window: {{ receipt.start_time | datetime('%b %d, %I:%M %p') }} to {{ receipt.end_time | datetime('%b %d, %I:%M %p') }}
+                                </div>
+                            </td>
+                            <td class="text-center">{{ receipt.duration_hours }}h</td>
+                            <td class="text-end">{{ receipt.hourly_rate | currency }}</td>
+                            <td class="text-end fw-bold">{{ receipt.amount | currency }}</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">Grand Total:</td>
+                            <td class="text-end fw-bold fs-5 text-success">{{ receipt.amount | currency }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- Payment Method & Verification -->
+            <div class="p-3 bg-light rounded border mb-4">
+                <div class="row align-items-center">
+                    <div class="col-sm-8">
+                        <div class="small text-muted">Payment Channel:</div>
+                        <div class="fw-semibold text-dark">{{ receipt.payment_method }} (Simulated Demo Gateway)</div>
+                        <div class="small text-muted mt-1">{{ receipt.notes }}</div>
+                    </div>
+                    <div class="col-sm-4 text-sm-end mt-2 mt-sm-0">
+                        <i class="bi bi-shield-check text-success fs-2"></i>
+                        <div class="small text-success fw-bold">Verified Transaction</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Receipt Footer Note -->
+            <div class="text-center text-muted small pt-3 border-top">
+                Thank you for parking with SmartPark Pro! Please retain this receipt or barcode for verification at exit gates.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

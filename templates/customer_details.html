@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ customer.full_name }} - Customer Profile{% endblock %}
+{% block page_title %}Customer Profile{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">{{ customer.full_name }}</h4>
+        <p class="text-muted small mb-0">Customer Profile & Complete Activity History</p>
+    </div>
+    <a href="{{ url_for('customers.list_customers') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Customers
+    </a>
+</div>
+
+<div class="row g-4 mb-4">
+    <!-- Customer Info Card -->
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-person-badge text-primary me-2"></i>Contact Details</h6>
+            </div>
+            <div class="card-body p-4">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <th class="text-muted fw-normal" style="width: 120px;">Full Name:</th>
+                        <td class="fw-bold">{{ customer.full_name }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted fw-normal">Email:</th>
+                        <td>{{ customer.email or '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted fw-normal">Phone:</th>
+                        <td>{{ customer.phone or '—' }}</td>
+                    </tr>
+                    <tr>
+                        <th class="text-muted fw-normal">Joined Date:</th>
+                        <td>{{ customer.created_at | datetime }}</td>
+                    </tr>
+                </table>
+
+                <h6 class="fw-bold text-muted text-uppercase small mt-4 mb-3">Registered Vehicles</h6>
+                <div class="list-group">
+                    {% for v in vehicles %}
+                        <div class="list-group-item d-flex align-items-center justify-content-between">
+                            <div>
+                                <span class="badge bg-dark font-monospace me-2">{{ v.license_plate }}</span>
+                                <span class="small text-muted">{{ v.make_model or v.vehicle_type }}</span>
+                            </div>
+                            <span class="badge bg-light text-dark border small">{{ v.vehicle_type }}</span>
+                        </div>
+                    {% else %}
+                        <div class="text-muted small">No vehicles registered yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payments History Card -->
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-receipt-cutoff text-success me-2"></i>Payment History</h6>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Ref</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th class="text-end">Receipt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in payments %}
+                            <tr>
+                                <td class="font-monospace small">{{ p.transaction_ref }}</td>
+                                <td class="fw-bold text-success">{{ p.amount | currency }}</td>
+                                <td><span class="badge {{ p.payment_status | status_badge }}">{{ p.payment_status | capitalize }}</span></td>
+                                <td class="small text-muted">{{ p.created_at | datetime('%Y-%m-%d') }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('payments.view_receipt', payment_id=p.id) }}" class="btn btn-sm btn-outline-primary py-0 px-2">
+                                        View
+                                    </a>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted small">No payment transactions found.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reservation History Table -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-calendar3 text-primary me-2"></i>Reservation History</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Vehicle</th>
+                    <th>Bay / Slot</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Duration</th>
+                    <th>Amount</th>
+                    <th>Booking Status</th>
+                    <th>Payment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in reservations %}
+                    <tr>
+                        <td class="fw-bold">
+                            <a href="{{ url_for('reservations.view_reservation', res_id=r.id) }}" class="text-decoration-none">
+                                {{ r.reservation_code }}
+                            </a>
+                        </td>
+                        <td><span class="badge bg-dark font-monospace">{{ r.license_plate }}</span></td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ r.slot_number }}</span>
+                            <span class="small text-muted ms-1">{{ r.area_name }}</span>
+                        </td>
+                        <td class="small">{{ r.start_time | datetime('%b %d, %I:%M %p') }}</td>
+                        <td class="small">{{ r.end_time | datetime('%b %d, %I:%M %p') }}</td>
+                        <td class="small">{{ r.duration_hours }}h</td>
+                        <td class="fw-bold text-primary">{{ r.estimated_amount | currency }}</td>
+                        <td><span class="badge {{ r.booking_status | status_badge }}">{{ r.booking_status | capitalize }}</span></td>
+                        <td><span class="badge {{ r.payment_status | status_badge }}">{{ r.payment_status | capitalize }}</span></td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted small">No reservations on file.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

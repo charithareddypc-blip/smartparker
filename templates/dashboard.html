@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Dashboard & Analytics{% endblock %}
+
+{% block content %}
+<!-- Top Row: Metric Summary Cards -->
+<div class="row g-3 mb-4">
+    <!-- Total Capacity -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-primary">
+            <div>
+                <div class="metric-title">Total Spaces</div>
+                <div class="metric-value" id="valTotalSlots">{{ metrics.total_slots }}</div>
+                <div class="small text-muted mt-1"><i class="bi bi-geo-alt"></i> Across all levels</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-p-square"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Available Spaces -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-success">
+            <div>
+                <div class="metric-title">Available Now</div>
+                <div class="metric-value text-success" id="valAvailableSpaces">{{ metrics.available_spaces }}</div>
+                <div class="small text-success mt-1"><i class="bi bi-check-circle"></i> Ready for parking</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-check2-circle"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reserved Spaces -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-warning">
+            <div>
+                <div class="metric-title">Reserved Spaces</div>
+                <div class="metric-value text-warning" id="valReservedSpaces">{{ metrics.reserved_spaces }}</div>
+                <div class="small text-muted mt-1"><i class="bi bi-clock"></i> Upcoming bookings</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-hourglass-split"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Occupied Spaces -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-danger">
+            <div>
+                <div class="metric-title">Occupied Spaces</div>
+                <div class="metric-value text-danger" id="valOccupiedSpaces">{{ metrics.occupied_spaces }}</div>
+                <div class="small text-danger mt-1"><i class="bi bi-car-front-fill"></i> In-bay vehicles</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-car-front-fill"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Occupancy % -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card">
+            <div>
+                <div class="metric-title">Occupancy Rate</div>
+                <div class="metric-value" id="valOccupancyPercent">{{ metrics.occupancy_percentage }}%</div>
+                <div class="progress mt-2" style="height: 6px; width: 140px;">
+                    <div class="progress-bar bg-danger" id="progressBarOccupancy" role="progressbar" style="width: {{ metrics.occupancy_percentage }}%;"></div>
+                </div>
+            </div>
+            <div class="metric-icon-box bg-light text-dark">
+                <i class="bi bi-pie-chart-fill"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Reservations -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-info">
+            <div>
+                <div class="metric-title">Total Bookings</div>
+                <div class="metric-value">{{ metrics.total_reservations }}</div>
+                <div class="small text-muted mt-1"><i class="bi bi-calendar3"></i> All-time volume</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-journal-bookmark-fill"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Collected -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-success">
+            <div>
+                <div class="metric-title">Revenue Collected</div>
+                <div class="metric-value text-primary">{{ revenue.total_revenue | currency }}</div>
+                <div class="small text-muted mt-1">{{ revenue.total_paid_count }} completed transactions</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-cash-stack"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Payments -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-warning">
+            <div>
+                <div class="metric-title">Pending Payments</div>
+                <div class="metric-value text-secondary">{{ revenue.pending_amount | currency }}</div>
+                <div class="small text-muted mt-1">{{ revenue.pending_count }} reservations pending</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-receipt-cutoff"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+    <!-- Occupancy Doughnut Chart -->
+    <div class="col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-pie-chart me-2 text-primary"></i>Occupancy Status</h6>
+                <span class="badge bg-light text-dark border">Live DB</span>
+            </div>
+            <div class="card-body d-flex flex-column align-items-center justify-content-center p-4">
+                <div style="width: 220px; height: 220px;">
+                    <canvas id="occupancyDoughnutChart"></canvas>
+                </div>
+                <div class="d-flex justify-content-center gap-3 mt-3 small">
+                    <span><i class="bi bi-circle-fill text-success me-1"></i> Available</span>
+                    <span><i class="bi bi-circle-fill text-warning me-1"></i> Reserved</span>
+                    <span><i class="bi bi-circle-fill text-danger me-1"></i> Occupied</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Weekly Bookings Line/Bar Chart -->
+    <div class="col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-graph-up me-2 text-primary"></i>Daily Reservations (7 Days)</h6>
+                <span class="badge bg-light text-dark border">Count</span>
+            </div>
+            <div class="card-body p-3">
+                <canvas id="reservationsTrendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revenue Trend Chart -->
+    <div class="col-lg-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-currency-dollar me-2 text-primary"></i>Payment Revenue Trend</h6>
+                <span class="badge bg-light text-dark border">Daily $</span>
+            </div>
+            <div class="card-body p-3">
+                <canvas id="revenueTrendChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Slot Availability Live Overview -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-grid-3x3-gap-fill text-primary"></i>
+            <h6 class="mb-0 fw-bold">Parking Bays Availability Overview</h6>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge badge-status-available"><i class="bi bi-circle-fill" style="font-size: 8px;"></i> Available</span>
+            <span class="badge badge-status-reserved"><i class="bi bi-circle-fill" style="font-size: 8px;"></i> Reserved</span>
+            <span class="badge badge-status-occupied"><i class="bi bi-circle-fill" style="font-size: 8px;"></i> Occupied</span>
+            <a href="{{ url_for('parking.slots_list') }}" class="btn btn-sm btn-outline-primary ms-2">Manage All Slots</a>
+        </div>
+    </div>
+    <div class="card-body p-3">
+        <div class="slot-grid">
+            {% for slot in slots_overview %}
+                <div class="slot-card status-{{ slot.status }}">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <span class="badge bg-light text-dark border">{{ slot.floor_level }}</span>
+                        <span class="badge {{ slot.status | status_badge }}">{{ slot.status | capitalize }}</span>
+                    </div>
+                    <div class="slot-number-badge text-dark">{{ slot.slot_number }}</div>
+                    <div class="slot-type-pill bg-light border text-secondary">{{ slot.slot_type }}</div>
+                    <div class="fw-bold text-primary small">{{ slot.hourly_rate | currency }}/hr</div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Tables: Recent Reservations & Latest Payments -->
+<div class="row g-3">
+    <!-- Recent Reservations -->
+    <div class="col-lg-7">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-calendar-event me-2 text-primary"></i>Recent Reservations</h6>
+                <a href="{{ url_for('reservations.list_reservations') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Customer & Car</th>
+                            <th>Slot</th>
+                            <th>Start Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in recent_reservations %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('reservations.view_reservation', res_id=r.id) }}" class="fw-bold text-decoration-none">
+                                        {{ r.reservation_code }}
+                                    </a>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">{{ r.customer_name }}</div>
+                                    <div class="small text-muted">{{ r.license_plate }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border fw-bold">{{ r.slot_number }}</span>
+                                </td>
+                                <td class="small">{{ r.start_time | datetime('%b %d, %I:%M %p') }}</td>
+                                <td>
+                                    <span class="badge {{ r.booking_status | status_badge }}">{{ r.booking_status | capitalize }}</span>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">No reservations created yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Latest Payments -->
+    <div class="col-lg-5">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-receipt me-2 text-primary"></i>Latest Payments</h6>
+                <a href="{{ url_for('payments.list_payments') }}" class="btn btn-sm btn-outline-secondary">All Payments</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Ref</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in latest_payments %}
+                            <tr>
+                                <td class="font-monospace small">
+                                    <a href="{{ url_for('payments.view_receipt', payment_id=p.id) }}" class="text-decoration-none">
+                                        {{ p.transaction_ref }}
+                                    </a>
+                                </td>
+                                <td class="fw-bold text-success">{{ p.amount | currency }}</td>
+                                <td class="small text-muted">{{ p.payment_method }}</td>
+                                <td>
+                                    <span class="badge {{ p.payment_status | status_badge }}">{{ p.payment_status | capitalize }}</span>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No payment transactions recorded.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

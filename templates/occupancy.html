@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Occupancy Monitoring{% endblock %}
+{% block page_title %}Live Facility Occupancy & Check-In/Out{% endblock %}
+
+{% block content %}
+<!-- Top Header & Actions -->
+<div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold mb-1">Live Occupancy & Gate Operations</h4>
+        <p class="text-muted small mb-0">Monitor real-time vehicle bays, execute arrival check-ins, and process vehicle departures.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#checkInModal">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Check In Vehicle
+        </button>
+    </div>
+</div>
+
+<!-- Occupancy Metric Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-primary">
+            <div>
+                <div class="metric-title">Facility Capacity</div>
+                <div class="metric-value">{{ metrics.total_slots }}</div>
+                <div class="small text-muted mt-1">Total configured slots</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-grid-3x3"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-danger">
+            <div>
+                <div class="metric-title">Currently Occupied</div>
+                <div class="metric-value text-danger">{{ metrics.occupied_spaces }}</div>
+                <div class="small text-danger mt-1">Vehicles in parking bays</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-car-front-fill"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-warning">
+            <div>
+                <div class="metric-title">Reserved Bookings</div>
+                <div class="metric-value text-warning">{{ metrics.reserved_spaces }}</div>
+                <div class="small text-muted mt-1">Awaiting vehicle arrival</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-calendar-check"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="metric-card metric-success">
+            <div>
+                <div class="metric-title">Available Spaces</div>
+                <div class="metric-value text-success">{{ metrics.available_spaces }}</div>
+                <div class="small text-success mt-1">{{ metrics.occupancy_percentage }}% capacity used</div>
+            </div>
+            <div class="metric-icon-box">
+                <i class="bi bi-check-circle"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Visual Slot Map (Grouped by Floor / Area) -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-map-fill text-primary"></i>
+            <h6 class="mb-0 fw-bold">Live Visual Parking Slot Map</h6>
+        </div>
+        <div class="d-flex align-items-center gap-2 small">
+            <span class="badge badge-status-available"><i class="bi bi-circle-fill" style="font-size: 8px;"></i> Available ({{ metrics.available_spaces }})</span>
+            <span class="badge badge-status-reserved"><i class="bi bi-circle-fill" style="font-size: 8px;"></i> Reserved ({{ metrics.reserved_spaces }})</span>
+            <span class="badge badge-status-occupied"><i class="bi bi-circle-fill" style="font-size: 8px;"></i> Occupied ({{ metrics.occupied_spaces }})</span>
+            <span class="badge badge-status-maintenance"><i class="bi bi-circle-fill" style="font-size: 8px;"></i> Maintenance ({{ metrics.maintenance_spaces }})</span>
+        </div>
+    </div>
+    <div class="card-body p-4">
+        {% for area in areas %}
+            <div class="mb-4">
+                <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-3">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-building me-1 text-secondary"></i> {{ area.floor_level }} - {{ area.name }}
+                        <span class="badge bg-light text-muted border ms-2 small">{{ area.area_code }}</span>
+                    </h6>
+                    <span class="small text-muted">{{ area.slots|length }} bays</span>
+                </div>
+                <div class="slot-grid">
+                    {% for s in area.slots %}
+                        <div class="slot-card status-{{ s.status }}">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge {{ s.status | status_badge }} small">{{ s.status | capitalize }}</span>
+                                <span class="small text-muted">{{ s.slot_type }}</span>
+                            </div>
+                            <div class="slot-number-badge text-dark">{{ s.slot_number }}</div>
+                            <div class="small fw-bold text-primary">{{ s.hourly_rate | currency }}/hr</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Active Parking Sessions & Departure Check-Out -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-car-front-fill text-danger"></i>
+                    <h6 class="mb-0 fw-bold">Active Parking Sessions (Currently In-Bay)</h6>
+                </div>
+                <span class="badge bg-danger rounded-pill">{{ active_sessions|length }} Active</span>
+            </div>
+            <div class="p-3 border-bottom bg-light">
+                <form method="GET" action="{{ url_for('occupancy.live_monitor') }}" class="d-flex gap-2">
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search vehicle plate, slot, or reservation..." value="{{ search }}">
+                    <button type="submit" class="btn btn-sm btn-primary">Search</button>
+                    {% if search %}
+                        <a href="{{ url_for('occupancy.live_monitor') }}" class="btn btn-sm btn-light border">Clear</a>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Slot</th>
+                            <th>Vehicle Plate</th>
+                            <th>Customer</th>
+                            <th>Check-In Time</th>
+                            <th>Initial Fee</th>
+                            <th class="text-end">Departure</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in active_sessions %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-light text-dark border fs-6 fw-bold">{{ session.slot_number }}</span>
+                                    <div class="small text-muted">{{ session.area_name }}</div>
+                                </td>
+                                <td>
+                                    <div class="font-monospace fw-bold">{{ session.license_plate }}</div>
+                                    <div class="small text-muted">{{ session.make_model or session.vehicle_type }}</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold">{{ session.customer_name or 'Walk-in / Direct' }}</div>
+                                    <div class="small text-muted">{{ session.customer_phone or '—' }}</div>
+                                </td>
+                                <td class="small">
+                                    <div><i class="bi bi-clock-history text-primary"></i> {{ session.check_in_time | datetime('%I:%M %p, %b %d') }}</div>
+                                </td>
+                                <td class="fw-bold text-dark">{{ session.initial_fee | currency }}</td>
+                                <td class="text-end">
+                                    <form action="{{ url_for('occupancy.check_out', session_id=session.id) }}" method="POST" onsubmit="return confirm('Process checkout for Vehicle {{ session.license_plate }} in Slot {{ session.slot_number }}?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-box-arrow-right me-1"></i> Check-Out
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="bi bi-car-front fs-1"></i>
+                                    <p class="mt-2 mb-0">No active vehicles currently occupying slots.</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Occupancy Audit Trail Logs -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-clock-history text-primary"></i>
+                    <h6 class="mb-0 fw-bold">Recent Occupancy Logs</h6>
+                </div>
+            </div>
+            <div class="card-body p-3" style="max-height: 480px; overflow-y: auto;">
+                <div class="list-group list-group-flush">
+                    {% for log in logs %}
+                        <div class="list-group-item px-0 py-2 border-0 border-bottom">
+                            <div class="d-flex align-items-center justify-content-between mb-1">
+                                <span class="badge {% if log.event_type == 'check_in' %}bg-danger{% elif log.event_type == 'check_out' %}bg-success{% elif log.event_type == 'cancellation' %}bg-dark{% else %}bg-secondary{% endif %} text-uppercase" style="font-size: 10px;">
+                                    {{ log.event_type }}
+                                </span>
+                                <span class="small text-muted">{{ log.logged_at | datetime('%H:%M:%S') }}</span>
+                            </div>
+                            <div class="small fw-semibold text-dark">{{ log.details }}</div>
+                            <div class="small text-muted">Slot: <span class="badge bg-light text-dark border">{{ log.slot_number }}</span> ({{ log.area_code }})</div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted small">No occupancy events recorded yet.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Check-In Modal -->
+<div class="modal fade" id="checkInModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('occupancy.check_in') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-box-arrow-in-right text-primary me-2"></i>Vehicle Check-In</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Select from Eligible Reserved Bookings</label>
+                        <select class="form-select mb-2" onchange="if(this.value) document.getElementById('reservation_input').value = this.value;">
+                            <option value="">-- Or choose an active reservation below --</option>
+                            {% for er in eligible_reservations %}
+                                <option value="{{ er.reservation_code }}">
+                                    {{ er.reservation_code }} | {{ er.license_plate }} ({{ er.customer_name }}) -> Slot {{ er.slot_number }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Reservation Code <span class="text-danger">*</span></label>
+                        <input type="text" name="reservation_input" id="reservation_input" class="form-control font-monospace" placeholder="e.g. RES-20261015-ABCD" required>
+                        <div class="form-text small">Enter or scan the customer's reservation confirmation code.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Confirm Check-In</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
